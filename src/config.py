@@ -95,8 +95,8 @@ DEADBAND_THRESHOLD = 0.02  # Ignore joint changes smaller than this (radians)
 # ──────────────────────────────────────────────
 SIM_RENDER_MODE = "human"
 SIM_OBS_TYPE = "pixels_agent_pos"
-# Use diagonal_wrist: front_wrist expects "wrist_camera" but task provides "wrist.right"
-SIM_CAMERA_CONFIG = "diagonal_wrist"
+# POV camera: behind the robot looking forward over its shoulder
+SIM_CAMERA_CONFIG = "pov"
 
 # ──────────────────────────────────────────────
 # Display
