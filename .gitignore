@@ -1,4 +1,6 @@
 .venv/
+.mujoco_install/
+.mujoco_mount/
 __pycache__/
 *.pyc
 *.pyo
