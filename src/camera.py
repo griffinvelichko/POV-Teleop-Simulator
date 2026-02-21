@@ -1,28 +1,24 @@
 """
-camera.py — Camera capture with optional GoPro Hero 11 Black fish-eye correction.
+camera.py — Camera capture for the POV teleop pipeline.
 
 Usage:
-    cam = Camera(device=0, undistort=False)
+    cam = Camera(device=0)
     ok, frame = cam.read()  # frame is BGR np.ndarray (H, W, 3) or None
     cam.release()
 """
 
 import cv2
-import numpy as np
 
 from config import (
     CAMERA_DEVICE,
     CAMERA_WIDTH,
     CAMERA_HEIGHT,
     CAMERA_FPS,
-    ENABLE_UNDISTORT,
-    GOPRO_CAMERA_MATRIX,
-    GOPRO_DIST_COEFFS,
 )
 
 
 class Camera:
-    """OpenCV video capture wrapper with optional GoPro fish-eye undistortion."""
+    """OpenCV video capture wrapper."""
 
     def __init__(
         self,
@@ -30,12 +26,8 @@ class Camera:
         width=CAMERA_WIDTH,
         height=CAMERA_HEIGHT,
         fps=CAMERA_FPS,
-        undistort=ENABLE_UNDISTORT,
     ):
         self.device = device
-        self._width = width
-        self._height = height
-        self._undistort = undistort
 
         self._cap = cv2.VideoCapture(device)
         if not self._cap.isOpened():
@@ -48,48 +40,15 @@ class Camera:
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         self._cap.set(cv2.CAP_PROP_FPS, fps)
 
-        self._map1 = None
-        self._map2 = None
-        if undistort:
-            self._init_undistort_maps(width, height)
-
-    def _init_undistort_maps(self, w: int, h: int) -> None:
-        """Pre-compute remap tables for fast per-frame undistortion."""
-        new_matrix, _ = cv2.getOptimalNewCameraMatrix(
-            GOPRO_CAMERA_MATRIX,
-            GOPRO_DIST_COEFFS,
-            (w, h),
-            1.0,
-            (w, h),
-        )
-        self._map1, self._map2 = cv2.initUndistortRectifyMap(
-            GOPRO_CAMERA_MATRIX,
-            GOPRO_DIST_COEFFS,
-            np.eye(3),
-            new_matrix,
-            (w, h),
-            cv2.CV_16SC2,
-        )
-
-    def read(self) -> tuple[bool, np.ndarray | None]:
+    def read(self) -> tuple[bool, object]:
         """
         Read a single frame from the camera.
 
         Returns:
             tuple: (success: bool, frame: np.ndarray | None)
                    frame is BGR, shape (H, W, 3), dtype uint8
-                   If undistort is enabled, frame is already corrected
         """
-        ret, frame = self._cap.read()
-        if not ret:
-            return False, None
-
-        if self._undistort and frame is not None:
-            frame = cv2.remap(
-                frame, self._map1, self._map2, cv2.INTER_LINEAR
-            )
-
-        return True, frame
+        return self._cap.read()
 
     def release(self) -> None:
         """Release the camera device."""
@@ -111,28 +70,58 @@ def detect_cameras(max_index: int = 5) -> list[int]:
 
 
 if __name__ == "__main__":
+    import argparse
+    import sys
     import time
 
-    cam = Camera()
-    print(f"Camera opened: device={cam.device}")
-    print(f"Available cameras: {detect_cameras()}")
+    parser = argparse.ArgumentParser(description="Test camera connection")
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=CAMERA_DEVICE,
+        help="Camera device index (default: 0). Run with --list to find indices.",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available camera indices and exit",
+    )
+    args = parser.parse_args()
 
+    available = detect_cameras()
+    print(f"Available cameras: {available}")
+
+    if args.list:
+        print("Use --camera N to test (e.g. python src/camera.py --camera 1)")
+        sys.exit(0)
+
+    if args.camera not in available:
+        print(f"\nCamera {args.camera} not found. Try: --camera 0, --camera 1, etc.")
+        sys.exit(1)
+
+    print(f"\nOpening camera {args.camera}")
+    print("Press 'q' to quit\n")
+
+    cam = Camera(device=args.camera)
     fps_counter = 0
     t0 = time.time()
-    while True:
-        ok, frame = cam.read()
-        if not ok:
-            break
-        fps_counter += 1
-        elapsed = time.time() - t0
-        if elapsed >= 1.0:
-            print(f"FPS: {fps_counter / elapsed:.1f}")
-            fps_counter = 0
-            t0 = time.time()
 
-        cv2.imshow("Camera Test", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+    try:
+        while True:
+            ok, frame = cam.read()
+            if not ok:
+                print("Camera read failed.")
+                break
+            fps_counter += 1
+            elapsed = time.time() - t0
+            if elapsed >= 1.0:
+                print(f"FPS: {fps_counter / elapsed:.1f}")
+                fps_counter = 0
+                t0 = time.time()
 
-    cam.release()
-    cv2.destroyAllWindows()
+            cv2.imshow("Camera Test", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    finally:
+        cam.release()
+        cv2.destroyAllWindows()
