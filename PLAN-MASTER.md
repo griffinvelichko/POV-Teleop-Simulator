@@ -28,7 +28,7 @@
 | File | Owner | Purpose |
 |------|-------|---------|
 | `src/config.py` | Griffin | All shared constants (joint limits, camera params, thresholds) |
-| `src/camera.py` | Griffin | Camera capture, fish-eye correction, frame output |
+| `src/camera.py` | Griffin | Camera capture, frame output |
 | `src/pose.py` | Torrin | MediaPipe Pose + Hands wrapper, landmark extraction |
 | `src/mapping.py` | Damian | Landmark → joint angles → 6D robot action array |
 | `src/smoother.py` | Damian | Exponential moving average filter |
@@ -103,7 +103,7 @@ These are the exact function signatures each person must implement. **Do not dev
 # Griffin provides:
 class Camera:
     def __init__(self, device: int = 0, width: int = 1280, height: int = 720,
-                 fps: int = 30, undistort: bool = False) -> None: ...
+                 fps: int = 30) -> None: ...
     def read(self) -> tuple[bool, np.ndarray | None]:
         """Returns (success, bgr_frame). Frame is np.ndarray shape (H, W, 3) dtype uint8, or None."""
         ...
@@ -203,7 +203,7 @@ from mapping import JointMapper, Smoother
 from sim import SimController
 from display import Display
 
-camera = Camera(device=CAMERA_DEVICE, undistort=ENABLE_UNDISTORT)
+camera = Camera(device=CAMERA_DEVICE)
 tracker = PoseTracker()
 mapper = JointMapper()
 smoother = Smoother(alpha=SMOOTHING_ALPHA)

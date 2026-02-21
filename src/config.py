@@ -14,19 +14,6 @@ CAMERA_DEVICE = 0  # OpenCV device index (0 = default webcam)
 CAMERA_WIDTH = 1280  # Capture resolution width
 CAMERA_HEIGHT = 720  # Capture resolution height
 CAMERA_FPS = 30  # Target framerate
-ENABLE_UNDISTORT = False  # Set True for GoPro Hero 11 Black fish-eye correction
-
-# GoPro Hero 11 Black fish-eye correction (1280x720)
-# Calibrate with checkerboard for precision; these are reasonable defaults
-GOPRO_CAMERA_MATRIX = np.array(
-    [
-        [910.0, 0.0, 640.0],
-        [0.0, 910.0, 360.0],
-        [0.0, 0.0, 1.0],
-    ],
-    dtype=np.float32,
-)
-GOPRO_DIST_COEFFS = np.array([-0.3, 0.1, 0.0, 0.0, 0.0], dtype=np.float32)
 
 # ──────────────────────────────────────────────
 # MediaPipe Models
