@@ -24,11 +24,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Robotics",
 ]
 dependencies = [
-    "mediapipe>=0.10.30",
+    "mediapipe>=0.10.32",
     "opencv-python>=4.8.0",
     "numpy>=1.24.0",
     "gym-soarm>=0.4.0",
-    "scipy>=1.11.0",
+    "scipy",
 ]
 
 [project.optional-dependencies]
