@@ -286,14 +286,14 @@ JOINT_LIMITS = {
 
 ## Milestone Checklist
 
-- [ ] **M1:** Each person's module runs standalone with its own `if __name__ == "__main__"` test
-- [ ] **M2:** Camera + Pose integration works (skeleton on screen)
-- [ ] **M3:** Pose + Mapping integration works (action arrays printed)
-- [ ] **M4:** Sim runs with hardcoded or random actions
-- [ ] **M5:** Full pipeline: move arm → robot moves in sim
-- [ ] **M6:** Gripper control via hand landmarks
-- [ ] **M7:** Split-screen visualization with dashboard
-- [ ] **M8:** Demo-ready with FPS counter and polish
+- [x] **M1:** Each person's module runs standalone with its own `if __name__ == "__main__"` test
+- [x] **M2:** Camera + Pose integration works (skeleton on screen)
+- [x] **M3:** Pose + Mapping integration works (action arrays printed)
+- [x] **M4:** Sim runs with hardcoded or random actions
+- [x] **M5:** Full pipeline: move arm → robot moves in sim
+- [x] **M6:** Gripper control via hand landmarks
+- [x] **M7:** Split-screen visualization with dashboard
+- [x] **M8:** Demo-ready with FPS counter and polish
 
 ---
 
