@@ -35,10 +35,22 @@ from config import (
 class PoseResult:
     """Result from a single frame of pose + hand estimation."""
     pose_world_landmarks: list | None = None
+    """33 world landmarks (x, y, z in meters, origin at hip midpoint). None if no pose detected."""
+
     pose_landmarks: list | None = None
+    """33 normalized landmarks (x, y in 0-1, z relative depth). None if no pose detected."""
+
+    pose_visibility: list[float] | None = None
+    """33 visibility scores (0.0-1.0). None if no pose detected."""
+
     hand_landmarks: list | None = None
+    """21 hand landmarks (normalized x, y, z). None if no hand detected."""
+
     hand_world_landmarks: list | None = None
+    """21 hand world landmarks (meters). None if no hand detected."""
+
     timestamp_ms: int = 0
+    """Frame timestamp in milliseconds."""
 
 
 class PoseTracker:

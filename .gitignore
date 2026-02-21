@@ -1,4 +1,6 @@
 .venv/
+.mujoco_install/
+.mujoco_mount/
 venv/
 .claude/
 CLAUDE.md
@@ -11,3 +13,4 @@ assets/*.mp4
 *.egg-info/
 dist/
 build/
+src/__pycache__/

@@ -1,4 +1,12 @@
 mediapipe>=0.10.32
 opencv-python>=4.8.0
 numpy>=1.24.0
-scipy
+scipy>=1.11.0
+gym-soarm>=0.4.0
+gymnasium>=0.29.1
+
+# Compatibility with lerobot + torchvision (avoid resolver conflicts)
+torch>=2.2.1,<2.8.0
+torchvision>=0.17.0
+setuptools>=71.0.0,<81.0.0
+fsspec[http]>=2023.1.0,<=2025.9.0

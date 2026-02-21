@@ -84,7 +84,7 @@ def _check_visibility(pose_result, indices: list[int]) -> bool:
     Uses pose_visibility when available; otherwise per-landmark visibility
     on pose_landmarks (normalized landmarks often carry visibility).
     """
-    if pose_result.pose_landmarks is None and pose_result.pose_visibility is None:
+    if pose_result.pose_landmarks is None and getattr(pose_result, "pose_visibility", None) is None:
         return False
     for i in indices:
         if _get_visibility(pose_result, i) <= MIN_VISIBILITY:
