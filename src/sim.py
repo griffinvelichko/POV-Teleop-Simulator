@@ -1,7 +1,7 @@
 """
 sim.py — gym-soarm SO-ARM101 simulator wrapper.
 
-Wraps the SoArm-v0 Gymnasium environment for use in the teleop pipeline.
+Wraps the gym_soarm/PickAndPlaceCube-v0 Gymnasium environment for use in the teleop pipeline.
 
 Usage:
     sim = SimController()
@@ -23,9 +23,11 @@ from config import SIM_RENDER_MODE, SIM_OBS_TYPE, SIM_CAMERA_CONFIG
 
 def _ensure_gym_soarm():
     """Import and register SoArm-v0. Deferred so --no-sim runs without torch/gym_soarm."""
-    # On macOS 14+, Apple removed OpenGL.framework; force MuJoCo to use GLFW.
+    # On macOS: import torch first (while platform is Darwin) so it loads .dylib;
+    # then patch platform so MuJoCo uses GLFW (Apple removed OpenGL.framework).
     _platform_system_orig = None
     if platform.system() == "Darwin":
+        import torch  # noqa: F401 — load before patching so torch picks libtorch_global_deps.dylib
         os.environ.setdefault("MUJOCO_GL", "glfw")
         _platform_system_orig = platform.system
         platform.system = lambda: "Unknown"
@@ -62,7 +64,7 @@ class SimController:
     ):
         _ensure_gym_soarm()
         self._env = gym.make(
-            "SoArm-v0",
+            "gym_soarm/PickAndPlaceCube-v0",
             render_mode=render_mode,
             obs_type=obs_type,
             camera_config=camera_config,
@@ -114,8 +116,13 @@ class SimController:
         obs = self._last_obs
         if isinstance(obs, dict) and "pixels" in obs:
             pixels = obs["pixels"]
-            if "front" in pixels:
-                rgb = pixels["front"]
+            # gym_soarm uses "front_camera" for front_wrist config
+            for key in ("front_camera", "front", "diagonal", "overview_camera"):
+                if key in pixels:
+                    rgb = pixels[key]
+                    return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            if pixels:
+                rgb = next(iter(pixels.values()))
                 return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
         return None
 
