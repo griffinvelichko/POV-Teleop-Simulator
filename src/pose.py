@@ -28,6 +28,8 @@ from config import (
     MIN_POSE_CONFIDENCE,
     MIN_TRACKING_CONFIDENCE,
     POSE_MODEL_PATH,
+    POSE_PROCESS_WIDTH,
+    POSE_PROCESS_HEIGHT,
 )
 
 
@@ -115,7 +117,15 @@ class PoseTracker:
             timestamp_ms = self._last_timestamp_ms + 1
         self._last_timestamp_ms = timestamp_ms
 
-        rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+        # Downscale for faster MediaPipe inference
+        h, w = bgr_frame.shape[:2]
+        if w > POSE_PROCESS_WIDTH or h > POSE_PROCESS_HEIGHT:
+            small = cv2.resize(bgr_frame, (POSE_PROCESS_WIDTH, POSE_PROCESS_HEIGHT),
+                               interpolation=cv2.INTER_LINEAR)
+        else:
+            small = bgr_frame
+
+        rgb_frame = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
         # Pose detection

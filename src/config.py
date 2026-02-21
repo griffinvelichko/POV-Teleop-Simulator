@@ -11,15 +11,20 @@ import numpy as np
 # Camera
 # ──────────────────────────────────────────────
 CAMERA_DEVICE = 0  # OpenCV device index (0 = default webcam)
-CAMERA_WIDTH = 1280  # Capture resolution width
-CAMERA_HEIGHT = 720  # Capture resolution height
+CAMERA_WIDTH = 640  # Capture resolution width (lower = faster capture)
+CAMERA_HEIGHT = 480  # Capture resolution height
 CAMERA_FPS = 30  # Target framerate
 
 # ──────────────────────────────────────────────
 # MediaPipe Models
 # ──────────────────────────────────────────────
-POSE_MODEL_PATH = "models/pose_landmarker_full.task"
+POSE_MODEL_PATH = "models/pose_landmarker_lite.task"
 HAND_MODEL_PATH = "models/hand_landmarker.task"
+
+# Resolution to downscale camera frames to before MediaPipe processing.
+# Lower = faster inference. 640x360 is a good balance for arm tracking.
+POSE_PROCESS_WIDTH = 640
+POSE_PROCESS_HEIGHT = 360
 
 # ──────────────────────────────────────────────
 # Pose Estimation Thresholds
@@ -113,13 +118,13 @@ HOME_POSITION = np.array([0.0, -1.57, 1.57, 1.57, -1.57, 0.0])
 # ──────────────────────────────────────────────
 # Smoothing
 # ──────────────────────────────────────────────
-SMOOTHING_ALPHA = 0.3  # EMA alpha: 0.1=smooth/sluggish, 0.3=balanced, 0.6=responsive
+SMOOTHING_ALPHA = 0.7  # EMA alpha: 0.1=smooth/sluggish, 0.3=balanced, 0.6=responsive
 DEADBAND_THRESHOLD = 0.02  # Ignore joint changes smaller than this (radians)
 
 # ──────────────────────────────────────────────
 # Simulator
 # ──────────────────────────────────────────────
-SIM_RENDER_MODE = "human"
+SIM_RENDER_MODE = "rgb_array"  # Our pipeline handles display; skip gym's viewer overhead
 SIM_OBS_TYPE = "pixels_agent_pos"
 # POV camera: behind the robot looking forward over its shoulder
 SIM_CAMERA_CONFIG = "pov"

@@ -279,12 +279,13 @@ def _human_to_robot(angles_dict: dict, gripper_value: float,
 
     action = np.zeros(6, dtype=np.float64)
     action[0] = angles_dict["shoulder_pan"]
-    action[1] = np.pi / 2 - angles_dict["shoulder_lift"]  # invert: small human angle (arm down) -> +val (robot down)
-    action[2] = np.pi - angles_dict["elbow_flex"]          # straight arm (pi) -> 0, bent -> positive
+    action[1] = (3 * np.pi / 4) - angles_dict["shoulder_lift"]  # invert: small human angle (arm down) -> +val (robot down)
+    action[2] = np.pi / 2 - angles_dict["elbow_flex"]          # straight arm (pi) -> 0, bent -> positive
     action[3] = np.pi - angles_dict["wrist_flex"]          # straight wrist (pi) -> 0, bent -> positive
     action[4] = angles_dict["wrist_roll"]
     action[5] = gripper_value
-
+    # print("Elbow flex:")
+    # print(action[2])
     for i, name in enumerate(joint_names):
         lo, hi = joint_limits[name]
         action[i] = np.clip(action[i], lo, hi)
