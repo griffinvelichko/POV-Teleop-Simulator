@@ -1,7 +1,9 @@
 """
 smoother.py — Signal smoothing filters for stable joint control.
 
-The Smoother applies an EMA to each joint independently.
+The Smoother applies an Exponential Moving Average (EMA) to each joint
+independently, with an optional deadband to suppress micro-jitter.
+
 Tuning alpha:
   - 0.1 = very smooth, sluggish (good for demos)
   - 0.3 = balanced (default)
@@ -11,7 +13,7 @@ Tuning alpha:
 
 import numpy as np
 
-from config import SMOOTHING_ALPHA, DEADBAND_THRESHOLD
+from config import DEADBAND_THRESHOLD, SMOOTHING_ALPHA
 
 
 class Smoother:
@@ -20,35 +22,45 @@ class Smoother:
 
     Usage:
         s = Smoother(alpha=0.3)
-        smoothed = s.update(raw_values)  # np.ndarray → np.ndarray
+        smoothed = s.update(raw_values)  # np.ndarray -> np.ndarray
         s.reset()
     """
 
-    def __init__(self, alpha=SMOOTHING_ALPHA, num_joints=6):
-        self.alpha = alpha
-        self.num_joints = num_joints
-        self.state = None
-        self.deadband = DEADBAND_THRESHOLD
+    def __init__(self, alpha: float = SMOOTHING_ALPHA, num_joints: int = 6):
+        if not 0.0 < alpha <= 1.0:
+            raise ValueError("alpha must be in (0, 1]")
+        if num_joints < 1:
+            raise ValueError("num_joints must be >= 1")
+        self.alpha = float(alpha)
+        self.num_joints = int(num_joints)
+        self.state: np.ndarray | None = None
+        self.deadband = float(DEADBAND_THRESHOLD)
 
     def update(self, values: np.ndarray) -> np.ndarray:
         """
         Apply EMA smoothing to a joint value array.
 
         Args:
-            values: np.ndarray of shape (num_joints,)
+            values: np.ndarray of shape (num_joints,) or (6,). Dtype is coerced to float64.
 
         Returns:
-            np.ndarray of shape (num_joints,) — smoothed values
+            np.ndarray of shape (num_joints,) — smoothed values. New array each call.
         """
-        values = np.asarray(values, dtype=np.float64).flatten()[: self.num_joints]
-        if values.size != self.num_joints:
-            values = np.resize(values, self.num_joints)
+        values = np.asarray(values, dtype=np.float64)
+        if values.ndim != 1:
+            raise ValueError("values must be 1D")
+        if len(values) != self.num_joints:
+            raise ValueError(
+                f"values length {len(values)} != num_joints {self.num_joints}"
+            )
 
         if self.state is None:
             self.state = values.copy()
             return self.state.copy()
 
-        raw_smoothed = self.alpha * values + (1.0 - self.alpha) * self.state
+        raw_smoothed = (
+            self.alpha * values + (1.0 - self.alpha) * self.state
+        )
         delta = np.abs(raw_smoothed - self.state)
         mask = delta > self.deadband
         self.state = np.where(mask, raw_smoothed, self.state)
@@ -61,7 +73,9 @@ class Smoother:
 
 
 if __name__ == "__main__":
+    # Test: feed noisy data through smoother, verify output is smooth
     s = Smoother(alpha=0.3)
+
     np.random.seed(42)
     target = np.array([0.5, -1.0, 1.2, 0.3, 0.0, 0.5])
 

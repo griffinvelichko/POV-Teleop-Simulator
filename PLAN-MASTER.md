@@ -118,11 +118,12 @@ class Camera:
 # Torrin provides:
 @dataclass
 class PoseResult:
-    """Result from a single frame of pose estimation."""
-    pose_landmarks: list | None          # 33 landmarks with x,y,z,visibility (world coords, meters)
-    hand_landmarks: list | None          # 21 hand landmarks with x,y,z (normalized)
-    pose_visibility: list[float] | None  # 33 visibility scores (0.0-1.0)
-    timestamp_ms: int                    # Frame timestamp in milliseconds
+    """Result from a single frame of pose + hand estimation."""
+    pose_world_landmarks: list | None = None   # 33 world landmarks (meters, hip-centered)
+    pose_landmarks: list | None = None          # 33 normalized landmarks (0-1, for drawing)
+    hand_landmarks: list | None = None          # 21 hand landmarks (normalized)
+    hand_world_landmarks: list | None = None    # 21 hand world landmarks (meters)
+    timestamp_ms: int = 0
 
 class PoseTracker:
     def __init__(self, model_path: str = "models/pose_landmarker_full.task",
@@ -132,8 +133,9 @@ class PoseTracker:
         ...
     def close(self) -> None: ...
 
-# Each landmark in pose_landmarks is an object with: .x, .y, .z (float, meters, hip-centered)
-# Each landmark in hand_landmarks is an object with: .x, .y, .z (float, normalized 0-1)
+# Each landmark in pose_world_landmarks has: .x, .y, .z (float, meters, hip-centered), .visibility (0-1)
+# Each landmark in pose_landmarks has: .x, .y, .z (float, normalized 0-1), .visibility (0-1)
+# Each landmark in hand_landmarks has: .x, .y, .z (float, normalized 0-1)
 ```
 
 ### Interface 3: Damian → Jaden (mapping.py → sim.py / main.py)

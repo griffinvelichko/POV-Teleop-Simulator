@@ -48,6 +48,10 @@ LM_LEFT_HIP = 23
 # Which arm to track
 TRACK_RIGHT_ARM = True
 
+# Camera perspective: MediaPipe pose models assume third-person (camera facing the user).
+# When True, mapping inverts horizontal angles so robot motion matches the camera view.
+THIRD_PERSON_VIEW = True
+
 # Required landmarks that must be visible for arm tracking
 REQUIRED_LANDMARKS = [
     LM_RIGHT_SHOULDER,

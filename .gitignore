@@ -1,6 +1,9 @@
 .venv/
 .mujoco_install/
 .mujoco_mount/
+venv/
+.claude/
+CLAUDE.md
 __pycache__/
 *.pyc
 *.pyo
