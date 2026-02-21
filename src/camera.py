@@ -1,5 +1,5 @@
 """
-camera.py — Camera capture with optional GoPro fish-eye correction.
+camera.py — Camera capture with optional GoPro Hero 11 Black fish-eye correction.
 
 Usage:
     cam = Camera(device=0, undistort=False)
@@ -22,7 +22,7 @@ from config import (
 
 
 class Camera:
-    """OpenCV video capture wrapper with optional fish-eye undistortion."""
+    """OpenCV video capture wrapper with optional GoPro fish-eye undistortion."""
 
     def __init__(
         self,
