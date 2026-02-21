@@ -12,6 +12,7 @@ from config import (
     JOINT_NAMES,
     MIN_VISIBILITY,
     REQUIRED_LANDMARKS,
+    THIRD_PERSON_VIEW,
     LM_RIGHT_SHOULDER,
     LM_RIGHT_ELBOW,
     LM_RIGHT_WRIST,
@@ -115,6 +116,10 @@ def _extract_arm_angles(world_landmarks) -> dict:
     """
     Extract 5 arm joint angles from world landmarks.
 
+    MediaPipe world coords are hip-centered; with THIRD_PERSON_VIEW we invert
+    horizontal angles (pan, roll) so that camera-facing-the-user view maps
+    correctly to the robot (user's right arm in image = correct robot motion).
+
     Args:
         world_landmarks: list of 33 world landmarks (meters, hip-centered).
                          Each element has .x, .y, .z.
@@ -135,14 +140,20 @@ def _extract_arm_angles(world_landmarks) -> dict:
     index_pt = vec(LM_RIGHT_INDEX)
 
     upper_arm = elbow - shoulder
+    # Horizontal rotation in x/z plane. Third-person: negate so image left/right matches robot.
     shoulder_pan = np.arctan2(upper_arm[0], -upper_arm[2])
+    if THIRD_PERSON_VIEW:
+        shoulder_pan = -shoulder_pan
 
     shoulder_lift = _angle_3pts(hip, shoulder, elbow)
     elbow_flex = _angle_3pts(shoulder, elbow, wrist)
     wrist_flex = _angle_3pts(elbow, wrist, index_pt)
 
     forearm = wrist - elbow
+    # Forearm twist in horizontal plane. Third-person: negate to match camera view.
     wrist_roll = np.arctan2(forearm[0], forearm[1])
+    if THIRD_PERSON_VIEW:
+        wrist_roll = -wrist_roll
 
     return {
         "shoulder_pan": float(shoulder_pan),
