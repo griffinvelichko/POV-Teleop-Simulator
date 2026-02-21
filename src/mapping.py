@@ -12,12 +12,12 @@ from config import (
     JOINT_NAMES,
     MIN_VISIBILITY,
     REQUIRED_LANDMARKS,
-    THIRD_PERSON_VIEW,
     LM_RIGHT_SHOULDER,
     LM_RIGHT_ELBOW,
     LM_RIGHT_WRIST,
     LM_RIGHT_HIP,
     LM_RIGHT_INDEX,
+    LM_RIGHT_PINKY,
 )
 
 # Avoid circular import; pose module provides PoseResult
@@ -116,9 +116,13 @@ def _extract_arm_angles(world_landmarks) -> dict:
     """
     Extract 5 arm joint angles from world landmarks.
 
-    MediaPipe world coords are hip-centered; with THIRD_PERSON_VIEW we invert
-    horizontal angles (pan, roll) so that camera-facing-the-user view maps
-    correctly to the robot (user's right arm in image = correct robot motion).
+    MediaPipe world coords are hip-centered (meters).  We always use a
+    third-person camera (facing the user), so horizontal angles (pan, roll)
+    are negated to mirror the user's motion onto the robot.
+
+    Wrist roll measures forearm pronation/supination by projecting the
+    index-pinky vector onto the plane perpendicular to the forearm axis
+    and measuring the angle from a gravity-aligned reference.
 
     Args:
         world_landmarks: list of 33 world landmarks (meters, hip-centered).
@@ -138,22 +142,55 @@ def _extract_arm_angles(world_landmarks) -> dict:
     wrist = vec(LM_RIGHT_WRIST)
     hip = vec(LM_RIGHT_HIP)
     index_pt = vec(LM_RIGHT_INDEX)
+    pinky_pt = vec(LM_RIGHT_PINKY)
 
+    # ── shoulder_pan: horizontal rotation of upper arm in x/z plane ──
     upper_arm = elbow - shoulder
-    # Horizontal rotation in x/z plane. Third-person: negate so image left/right matches robot.
-    shoulder_pan = np.arctan2(upper_arm[0], -upper_arm[2])
-    if THIRD_PERSON_VIEW:
-        shoulder_pan = -shoulder_pan
+    # Negate for third-person mirror: user's left/right maps to robot correctly
+    shoulder_pan = -np.arctan2(upper_arm[0], -upper_arm[2])
 
+    # ── shoulder_lift: angle between torso and upper arm ──
+    # _angle_3pts gives 0 when arm is along torso (down), pi when raised overhead.
+    # _human_to_robot subtracts pi/2 → arm down = -pi/2, horizontal = 0, overhead = pi/2.
     shoulder_lift = _angle_3pts(hip, shoulder, elbow)
+
+    # ── elbow_flex: angle at elbow ──
     elbow_flex = _angle_3pts(shoulder, elbow, wrist)
+
+    # ── wrist_flex: angle at wrist (elbow-wrist-fingers) ──
     wrist_flex = _angle_3pts(elbow, wrist, index_pt)
 
+    # ── wrist_roll: forearm pronation/supination ──
+    # Project the hand's lateral axis (index→pinky) onto the plane perpendicular
+    # to the forearm, then measure the angle from gravity-down reference.
     forearm = wrist - elbow
-    # Forearm twist in horizontal plane. Third-person: negate to match camera view.
-    wrist_roll = np.arctan2(forearm[0], forearm[1])
-    if THIRD_PERSON_VIEW:
-        wrist_roll = -wrist_roll
+    forearm_len = np.linalg.norm(forearm)
+    eps = 1e-8
+    if forearm_len > eps:
+        forearm_unit = forearm / forearm_len
+        # Hand lateral axis: index finger to pinky (across the palm)
+        hand_lateral = pinky_pt - index_pt
+        # Remove component along forearm axis (project onto perpendicular plane)
+        hand_lateral = hand_lateral - np.dot(hand_lateral, forearm_unit) * forearm_unit
+        lat_len = np.linalg.norm(hand_lateral)
+        if lat_len > eps:
+            hand_lateral = hand_lateral / lat_len
+            # Gravity-down reference in the perpendicular plane
+            gravity = np.array([0.0, 1.0, 0.0])  # MediaPipe y = downward
+            gravity_perp = gravity - np.dot(gravity, forearm_unit) * forearm_unit
+            grav_len = np.linalg.norm(gravity_perp)
+            if grav_len > eps:
+                gravity_perp = gravity_perp / grav_len
+                # Signed angle: positive = supination (palm up)
+                cos_r = np.clip(np.dot(hand_lateral, gravity_perp), -1.0, 1.0)
+                sin_r = np.dot(np.cross(gravity_perp, hand_lateral), forearm_unit)
+                wrist_roll = -np.arctan2(sin_r, cos_r)  # negate for third-person mirror
+            else:
+                wrist_roll = 0.0
+        else:
+            wrist_roll = 0.0
+    else:
+        wrist_roll = 0.0
 
     return {
         "shoulder_pan": float(shoulder_pan),
@@ -186,13 +223,19 @@ def _extract_gripper(hand_landmarks) -> float:
 def _human_to_robot(angles_dict: dict, gripper_value: float) -> np.ndarray:
     """
     Map extracted human joint angles to SO-ARM101 action space.
-    Applies offsets and clamps to joint limits.
+
+    Robot joint conventions (empirically verified):
+      shoulder_pan:  +val → arm rotates to +X (right in POV camera)
+      shoulder_lift: +val → arm tilts DOWN, -val → arm tilts UP
+      elbow_flex:    +val → elbow bends DOWN
+      wrist_flex:    +val → wrist curls DOWN
+      wrist_roll:    rotates gripper around forearm axis
     """
     action = np.zeros(6, dtype=np.float64)
     action[0] = angles_dict["shoulder_pan"]
-    action[1] = angles_dict["shoulder_lift"] - np.pi / 2
-    action[2] = np.pi - angles_dict["elbow_flex"]
-    action[3] = angles_dict["wrist_flex"] - np.pi / 2
+    action[1] = np.pi / 2 - angles_dict["shoulder_lift"]  # invert: small human angle (arm down) → +val (robot down)
+    action[2] = np.pi - angles_dict["elbow_flex"]          # straight arm (π) → 0, bent → positive
+    action[3] = np.pi - angles_dict["wrist_flex"]          # straight wrist (π) → 0, bent → positive
     action[4] = angles_dict["wrist_roll"]
     action[5] = gripper_value
 
@@ -292,6 +335,7 @@ if __name__ == "__main__":
         landmarks[LM_RIGHT_ELBOW] = FakeLandmark(0.2, 0.0, -0.3)
         landmarks[LM_RIGHT_WRIST] = FakeLandmark(0.4, 0.0, -0.4)
         landmarks[LM_RIGHT_INDEX] = FakeLandmark(0.5, 0.0, -0.4)
+        landmarks[LM_RIGHT_PINKY] = FakeLandmark(0.5, 0.05, -0.35)
         return landmarks
 
     fake_pose = FakePoseResult(

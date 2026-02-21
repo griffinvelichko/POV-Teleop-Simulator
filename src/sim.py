@@ -116,8 +116,8 @@ class SimController:
         obs = self._last_obs
         if isinstance(obs, dict) and "pixels" in obs:
             pixels = obs["pixels"]
-            # gym_soarm uses "front_camera" for front_wrist config
-            for key in ("front_camera", "front", "diagonal", "overview_camera"):
+            # Priority: pov camera first, then fall back to others
+            for key in ("pov", "diagonal", "front_camera", "front", "overview_camera"):
                 if key in pixels:
                     rgb = pixels[key]
                     return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
