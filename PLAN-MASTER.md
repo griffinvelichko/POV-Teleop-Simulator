@@ -27,14 +27,14 @@
 
 | File | Owner | Purpose |
 |------|-------|---------|
-| `config.py` | Griffin | All shared constants (joint limits, camera params, thresholds) |
-| `camera.py` | Griffin | Camera capture, fish-eye correction, frame output |
-| `pose.py` | Torrin | MediaPipe Pose + Hands wrapper, landmark extraction |
-| `mapping.py` | Damian | Landmark → joint angles → 6D robot action array |
-| `smoother.py` | Damian | Exponential moving average filter |
-| `sim.py` | Jaden | gym-soarm environment wrapper |
-| `display.py` | Jaden | Split-screen visualization, overlays, dashboard |
-| `main.py` | Jaden | Main loop orchestrating all modules |
+| `src/config.py` | Griffin | All shared constants (joint limits, camera params, thresholds) |
+| `src/camera.py` | Griffin | Camera capture, fish-eye correction, frame output |
+| `src/pose.py` | Torrin | MediaPipe Pose + Hands wrapper, landmark extraction |
+| `src/mapping.py` | Damian | Landmark → joint angles → 6D robot action array |
+| `src/smoother.py` | Damian | Exponential moving average filter |
+| `src/sim.py` | Jaden | gym-soarm environment wrapper |
+| `src/display.py` | Jaden | Split-screen visualization, overlays, dashboard |
+| `src/main.py` | Jaden | Main loop orchestrating all modules |
 | `requirements.txt` | Griffin | Python dependencies |
 
 ---

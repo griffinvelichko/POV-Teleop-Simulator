@@ -19,7 +19,7 @@ Camera (chest-mounted) → OpenCV → MediaPipe Pose → Joint Angles → gym-so
 ```bash
 pip install mediapipe opencv-python numpy gym-soarm scipy
 export MUJOCO_GL='egl'  # or 'glfw' on macOS
-python main.py
+python src/main.py      # or: python -m src.main (from project root)
 ```
 
 ## Documentation
