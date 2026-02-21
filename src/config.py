@@ -11,15 +11,20 @@ import numpy as np
 # Camera
 # ──────────────────────────────────────────────
 CAMERA_DEVICE = 0  # OpenCV device index (0 = default webcam)
-CAMERA_WIDTH = 1280  # Capture resolution width
-CAMERA_HEIGHT = 720  # Capture resolution height
+CAMERA_WIDTH = 640  # Capture resolution width (lower = faster capture)
+CAMERA_HEIGHT = 480  # Capture resolution height
 CAMERA_FPS = 30  # Target framerate
 
 # ──────────────────────────────────────────────
 # MediaPipe Models
 # ──────────────────────────────────────────────
-POSE_MODEL_PATH = "models/pose_landmarker_full.task"
+POSE_MODEL_PATH = "models/pose_landmarker_lite.task"
 HAND_MODEL_PATH = "models/hand_landmarker.task"
+
+# Resolution to downscale camera frames to before MediaPipe processing.
+# Lower = faster inference. 640x360 is a good balance for arm tracking.
+POSE_PROCESS_WIDTH = 640
+POSE_PROCESS_HEIGHT = 360
 
 # ──────────────────────────────────────────────
 # Pose Estimation Thresholds
@@ -38,11 +43,12 @@ LM_RIGHT_THUMB = 22
 LM_RIGHT_PINKY = 18
 LM_RIGHT_HIP = 24
 
-# Left arm chain (for future use)
+# Left arm chain
 LM_LEFT_SHOULDER = 11
 LM_LEFT_ELBOW = 13
 LM_LEFT_WRIST = 15
 LM_LEFT_INDEX = 19
+LM_LEFT_PINKY = 17
 LM_LEFT_HIP = 23
 
 # Which arm to track
@@ -58,6 +64,13 @@ REQUIRED_LANDMARKS = [
     LM_RIGHT_ELBOW,
     LM_RIGHT_WRIST,
     LM_RIGHT_HIP,
+]
+
+REQUIRED_LANDMARKS_LEFT = [
+    LM_LEFT_SHOULDER,
+    LM_LEFT_ELBOW,
+    LM_LEFT_WRIST,
+    LM_LEFT_HIP,
 ]
 
 # ──────────────────────────────────────────────
@@ -81,19 +94,37 @@ JOINT_LIMITS = {
     "gripper": (-0.175, 1.745),
 }
 
+LEFT_JOINT_NAMES = [
+    "left_shoulder_pan",
+    "left_shoulder_lift",
+    "left_elbow_flex",
+    "left_wrist_flex",
+    "left_wrist_roll",
+    "left_gripper",
+]
+
+LEFT_JOINT_LIMITS = {
+    "left_shoulder_pan": (-1.920, 1.920),
+    "left_shoulder_lift": (-1.745, 1.745),
+    "left_elbow_flex": (-1.690, 1.690),
+    "left_wrist_flex": (-1.658, 1.658),
+    "left_wrist_roll": (-2.744, 2.841),
+    "left_gripper": (-0.175, 1.745),
+}
+
 # Home position (from MJCF keyframe)
 HOME_POSITION = np.array([0.0, -1.57, 1.57, 1.57, -1.57, 0.0])
 
 # ──────────────────────────────────────────────
 # Smoothing
 # ──────────────────────────────────────────────
-SMOOTHING_ALPHA = 0.3  # EMA alpha: 0.1=smooth/sluggish, 0.3=balanced, 0.6=responsive
+SMOOTHING_ALPHA = 0.7  # EMA alpha: 0.1=smooth/sluggish, 0.3=balanced, 0.6=responsive
 DEADBAND_THRESHOLD = 0.02  # Ignore joint changes smaller than this (radians)
 
 # ──────────────────────────────────────────────
 # Simulator
 # ──────────────────────────────────────────────
-SIM_RENDER_MODE = "human"
+SIM_RENDER_MODE = "rgb_array"  # Our pipeline handles display; skip gym's viewer overhead
 SIM_OBS_TYPE = "pixels_agent_pos"
 # POV camera: behind the robot looking forward over its shoulder
 SIM_CAMERA_CONFIG = "pov"
@@ -102,5 +133,5 @@ SIM_CAMERA_CONFIG = "pov"
 # Display
 # ──────────────────────────────────────────────
 DISPLAY_WIDTH = 1280  # Total display window width
-DISPLAY_HEIGHT = 520  # Total display window height (480 video + 40 dashboard)
+DISPLAY_HEIGHT = 550  # Total display window height (480 video + 70 dashboard)
 WINDOW_NAME = "POV Teleop"
