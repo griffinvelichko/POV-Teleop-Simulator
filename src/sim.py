@@ -64,7 +64,7 @@ class SimController:
     ):
         _ensure_gym_soarm()
         self._env = gym.make(
-            "gym_soarm/PickAndPlaceCube-v0",
+            "gym_soarm/Teleop-v0",
             render_mode=render_mode,
             obs_type=obs_type,
             camera_config=camera_config,
@@ -85,15 +85,15 @@ class SimController:
 
     def step(self, action: np.ndarray) -> dict:
         """
-        Step the simulation with a 6D action array.
+        Step the simulation with a 6D or 12D action array.
 
         Args:
-            action: np.ndarray of shape (6,) — joint angle targets in radians
+            action: np.ndarray of shape (6,) or (12,) — joint angle targets in radians
 
         Returns:
             dict: observation from the environment
         """
-        action = np.asarray(action, dtype=np.float64).flatten()[:6]
+        action = np.asarray(action, dtype=np.float64).flatten()[:12]
         obs, reward, terminated, truncated, info = self._env.step(action)
         self._last_obs = obs
         self._last_action = action

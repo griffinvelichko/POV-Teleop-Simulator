@@ -1,7 +1,7 @@
 """
-main.py — POV Teleop main loop.
+main.py — POV Teleop main loop (dual-arm).
 
-Orchestrates: Camera → PoseTracker → JointMapper → Smoother → SimController → Display
+Orchestrates: Camera → PoseTracker → JointMapper/LeftJointMapper → Smoother → SimController → Display
 
 Usage (from project root):
     python -m src.main                    # default webcam
@@ -23,6 +23,8 @@ if __name__ == "__main__":
     if _src not in sys.path:
         sys.path.insert(0, _src)
 
+import numpy as np
+
 from config import (
     CAMERA_DEVICE,
     SMOOTHING_ALPHA,
@@ -30,7 +32,7 @@ from config import (
 )
 from camera import Camera
 from pose import PoseTracker, draw_landmarks_on_frame
-from mapping import JointMapper
+from mapping import JointMapper, LeftJointMapper
 from smoother import Smoother
 from sim import SimController
 from display import Display
@@ -38,7 +40,7 @@ from display import Display
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="POV Teleop: Body-cam → SO-ARM101 simulator"
+        description="POV Teleop: Body-cam → SO-ARM101 dual-arm simulator"
     )
     parser.add_argument(
         "--camera",
@@ -69,9 +71,11 @@ def main():
     print("Initializing pose tracker...")
     tracker = PoseTracker()
 
-    print("Initializing joint mapper and smoother...")
-    mapper = JointMapper()
-    smoother = Smoother(alpha=args.alpha)
+    print("Initializing joint mappers and smoothers...")
+    right_mapper = JointMapper()
+    left_mapper = LeftJointMapper()
+    right_smoother = Smoother(alpha=args.alpha)
+    left_smoother = Smoother(alpha=args.alpha)
 
     sim = None
     if not args.no_sim:
@@ -82,12 +86,13 @@ def main():
     print("Initializing display...")
     display = Display()
 
-    last_action = HOME_POSITION.copy()
+    last_right_action = HOME_POSITION.copy()
+    last_left_action = HOME_POSITION.copy()
     frame_count = 0
     t_start = time.time()
     fps = 0.0
 
-    print("Pipeline ready. Move your right arm in front of the camera.")
+    print("Pipeline ready. Move your arms in front of the camera.")
     print("Press 'q' to quit.\n")
 
     try:
@@ -99,17 +104,29 @@ def main():
 
             timestamp_ms = int((time.time() - t_start) * 1000)
             pose_result = tracker.process(frame, timestamp_ms)
-            raw_action = mapper.compute(pose_result)
 
-            if raw_action is not None:
-                action = smoother.update(raw_action)
-                last_action = action
+            # Right arm
+            raw_right = right_mapper.compute(pose_result)
+            if raw_right is not None:
+                right_action = right_smoother.update(raw_right)
+                last_right_action = right_action
             else:
-                action = last_action
+                right_action = last_right_action
+
+            # Left arm
+            raw_left = left_mapper.compute(pose_result)
+            if raw_left is not None:
+                left_action = left_smoother.update(raw_left)
+                last_left_action = left_action
+            else:
+                left_action = last_left_action
+
+            # Concatenate into 12D action for dual-arm sim
+            dual_action = np.concatenate([right_action, left_action])
 
             sim_frame = None
-            if sim is not None and action is not None:
-                sim.step(action)
+            if sim is not None:
+                sim.step(dual_action)
                 sim_frame = sim.get_sim_frame()
 
             draw_landmarks_on_frame(frame, pose_result)
@@ -119,7 +136,9 @@ def main():
             if elapsed > 0:
                 fps = frame_count / elapsed
 
-            display_frame = display.render(frame, sim_frame, action, fps)
+            display_frame = display.render(
+                frame, sim_frame, right_action, fps, left_action=left_action
+            )
             if not display.show(display_frame):
                 break
 

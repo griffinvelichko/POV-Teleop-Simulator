@@ -2,13 +2,13 @@
 display.py — Split-screen visualization with joint dashboard.
 
 Composites the camera feed and simulator view side-by-side,
-with a status bar showing joint angles and FPS.
+with a two-row status bar showing right and left arm joint angles and FPS.
 """
 
 import cv2
 import numpy as np
 
-from config import DISPLAY_WIDTH, DISPLAY_HEIGHT, WINDOW_NAME, JOINT_NAMES
+from config import DISPLAY_WIDTH, DISPLAY_HEIGHT, WINDOW_NAME, JOINT_NAMES, LEFT_JOINT_NAMES
 
 
 class Display:
@@ -17,7 +17,7 @@ class Display:
 
     Usage:
         disp = Display()
-        frame = disp.render(camera_frame, sim_frame, action, fps)
+        frame = disp.render(camera_frame, sim_frame, action, fps, left_action=left_action)
         keep_going = disp.show(frame)
         disp.close()
     """
@@ -25,7 +25,7 @@ class Display:
     def __init__(self, width=DISPLAY_WIDTH, height=DISPLAY_HEIGHT):
         self.width = width
         self.height = height
-        self._dashboard_height = 40
+        self._dashboard_height = 70
         self._panel_height = height - self._dashboard_height
         self._panel_width = width // 2
 
@@ -35,6 +35,7 @@ class Display:
         sim_frame: np.ndarray | None = None,
         action: np.ndarray | None = None,
         fps: float = 0.0,
+        left_action: np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Build the composited display frame.
@@ -42,8 +43,9 @@ class Display:
         Args:
             camera_frame: BGR np.ndarray from camera (with skeleton overlay drawn)
             sim_frame: BGR np.ndarray from simulator, or None (shows placeholder)
-            action: np.ndarray(6) current action, or None
+            action: np.ndarray(6) current right arm action, or None
             fps: float, current pipeline FPS
+            left_action: np.ndarray(6) current left arm action, or None
 
         Returns:
             np.ndarray: BGR composited frame ready for cv2.imshow
@@ -81,22 +83,42 @@ class Display:
         dashboard = np.zeros((self._dashboard_height, self.width, 3), dtype=np.uint8)
         dashboard[:] = (40, 40, 40)
 
+        # Row 1: Right arm (orange label)
         spacing = self.width // 7
+        right_color = (0, 140, 255)  # orange in BGR
+        cv2.putText(dashboard, "R:", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.45, right_color, 1)
         for i, name in enumerate(JOINT_NAMES):
             short = name[:5] if len(name) > 5 else name
             if action is not None and i < len(action):
                 text = f"{short}: {action[i]:+.2f}"
             else:
                 text = f"{short}: —"
-            x = 10 + i * spacing
+            x = 40 + i * spacing
             cv2.putText(
-                dashboard, text, (x, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1
+                dashboard, text, (x, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1
             )
 
+        # Row 2: Left arm (blue label)
+        left_color = (255, 140, 0)  # blue in BGR
+        cv2.putText(dashboard, "L:", (10, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.45, left_color, 1)
+        for i, name in enumerate(LEFT_JOINT_NAMES):
+            # Strip "left_" prefix for display
+            short_name = name.replace("left_", "")
+            short = short_name[:5] if len(short_name) > 5 else short_name
+            if left_action is not None and i < len(left_action):
+                text = f"{short}: {left_action[i]:+.2f}"
+            else:
+                text = f"{short}: —"
+            x = 40 + i * spacing
+            cv2.putText(
+                dashboard, text, (x, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1
+            )
+
+        # FPS in top-right of dashboard
         cv2.putText(
             dashboard,
             f"FPS: {fps:.0f}",
-            (self.width - 100, 28),
+            (self.width - 100, 24),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             (0, 255, 0),
@@ -153,8 +175,18 @@ if __name__ == "__main__":
                 0.5 + 0.3 * np.sin(t),
             ]
         )
+        left_action = np.array(
+            [
+                -np.sin(t) * 0.5,
+                np.cos(t) * 0.3,
+                np.sin(t * 2) * 0.8,
+                np.cos(t * 0.5) * 0.2,
+                0.0,
+                0.5 + 0.3 * np.sin(t),
+            ]
+        )
 
-        frame = disp.render(cam, sim, action, fps=30.0)
+        frame = disp.render(cam, sim, action, fps=30.0, left_action=left_action)
         if not disp.show(frame):
             break
 

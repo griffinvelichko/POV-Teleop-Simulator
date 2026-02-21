@@ -38,11 +38,12 @@ LM_RIGHT_THUMB = 22
 LM_RIGHT_PINKY = 18
 LM_RIGHT_HIP = 24
 
-# Left arm chain (for future use)
+# Left arm chain
 LM_LEFT_SHOULDER = 11
 LM_LEFT_ELBOW = 13
 LM_LEFT_WRIST = 15
 LM_LEFT_INDEX = 19
+LM_LEFT_PINKY = 17
 LM_LEFT_HIP = 23
 
 # Which arm to track
@@ -58,6 +59,13 @@ REQUIRED_LANDMARKS = [
     LM_RIGHT_ELBOW,
     LM_RIGHT_WRIST,
     LM_RIGHT_HIP,
+]
+
+REQUIRED_LANDMARKS_LEFT = [
+    LM_LEFT_SHOULDER,
+    LM_LEFT_ELBOW,
+    LM_LEFT_WRIST,
+    LM_LEFT_HIP,
 ]
 
 # ──────────────────────────────────────────────
@@ -81,6 +89,24 @@ JOINT_LIMITS = {
     "gripper": (-0.175, 1.745),
 }
 
+LEFT_JOINT_NAMES = [
+    "left_shoulder_pan",
+    "left_shoulder_lift",
+    "left_elbow_flex",
+    "left_wrist_flex",
+    "left_wrist_roll",
+    "left_gripper",
+]
+
+LEFT_JOINT_LIMITS = {
+    "left_shoulder_pan": (-1.920, 1.920),
+    "left_shoulder_lift": (-1.745, 1.745),
+    "left_elbow_flex": (-1.690, 1.690),
+    "left_wrist_flex": (-1.658, 1.658),
+    "left_wrist_roll": (-2.744, 2.841),
+    "left_gripper": (-0.175, 1.745),
+}
+
 # Home position (from MJCF keyframe)
 HOME_POSITION = np.array([0.0, -1.57, 1.57, 1.57, -1.57, 0.0])
 
@@ -102,5 +128,5 @@ SIM_CAMERA_CONFIG = "pov"
 # Display
 # ──────────────────────────────────────────────
 DISPLAY_WIDTH = 1280  # Total display window width
-DISPLAY_HEIGHT = 520  # Total display window height (480 video + 40 dashboard)
+DISPLAY_HEIGHT = 550  # Total display window height (480 video + 70 dashboard)
 WINDOW_NAME = "POV Teleop"

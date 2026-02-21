@@ -10,7 +10,7 @@ Requires model files:
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cv2
 import mediapipe as mp
@@ -43,14 +43,30 @@ class PoseResult:
     pose_visibility: list[float] | None = None
     """33 visibility scores (0.0-1.0). None if no pose detected."""
 
-    hand_landmarks: list | None = None
-    """21 hand landmarks (normalized x, y, z). None if no hand detected."""
+    right_hand_landmarks: list | None = None
+    """21 hand landmarks for right hand (normalized x, y, z). None if not detected."""
 
-    hand_world_landmarks: list | None = None
-    """21 hand world landmarks (meters). None if no hand detected."""
+    right_hand_world_landmarks: list | None = None
+    """21 hand world landmarks for right hand (meters). None if not detected."""
+
+    left_hand_landmarks: list | None = None
+    """21 hand landmarks for left hand (normalized x, y, z). None if not detected."""
+
+    left_hand_world_landmarks: list | None = None
+    """21 hand world landmarks for left hand (meters). None if not detected."""
 
     timestamp_ms: int = 0
     """Frame timestamp in milliseconds."""
+
+    @property
+    def hand_landmarks(self):
+        """Backward-compat: return right hand landmarks (or left if right unavailable)."""
+        return self.right_hand_landmarks or self.left_hand_landmarks
+
+    @property
+    def hand_world_landmarks(self):
+        """Backward-compat: return right hand world landmarks."""
+        return self.right_hand_world_landmarks or self.left_hand_world_landmarks
 
 
 class PoseTracker:
@@ -84,7 +100,7 @@ class PoseTracker:
             HandLandmarkerOptions(
                 base_options=BaseOptions(model_asset_path=hand_model_path),
                 running_mode=RunningMode.VIDEO,
-                num_hands=1,
+                num_hands=2,
                 min_hand_detection_confidence=0.5,
                 min_tracking_confidence=0.5,
             )
@@ -111,20 +127,31 @@ class PoseTracker:
             world_lms = None
             norm_lms = None
 
-        # Hand detection
+        # Hand detection — classify by handedness label
         hand_result = self._hands.detect_for_video(mp_image, timestamp_ms)
-        if hand_result.hand_landmarks:
-            hand_lms = hand_result.hand_landmarks[0]
-            hand_world_lms = hand_result.hand_world_landmarks[0]
-        else:
-            hand_lms = None
-            hand_world_lms = None
+        right_hand_lms = None
+        right_hand_world_lms = None
+        left_hand_lms = None
+        left_hand_world_lms = None
+
+        if hand_result.hand_landmarks and hand_result.handedness:
+            for i, handedness_list in enumerate(hand_result.handedness):
+                # handedness_list is a list of Category; take the first
+                label = handedness_list[0].category_name  # "Left" or "Right"
+                if label == "Right":
+                    right_hand_lms = hand_result.hand_landmarks[i]
+                    right_hand_world_lms = hand_result.hand_world_landmarks[i]
+                elif label == "Left":
+                    left_hand_lms = hand_result.hand_landmarks[i]
+                    left_hand_world_lms = hand_result.hand_world_landmarks[i]
 
         return PoseResult(
             pose_world_landmarks=world_lms,
             pose_landmarks=norm_lms,
-            hand_landmarks=hand_lms,
-            hand_world_landmarks=hand_world_lms,
+            right_hand_landmarks=right_hand_lms,
+            right_hand_world_landmarks=right_hand_world_lms,
+            left_hand_landmarks=left_hand_lms,
+            left_hand_world_landmarks=left_hand_world_lms,
             timestamp_ms=timestamp_ms,
         )
 
@@ -158,7 +185,13 @@ def draw_landmarks_on_frame(bgr_frame, pose_result: PoseResult):
     for idx, lm in enumerate(landmarks):
         if lm.visibility > 0.5:
             cx, cy = int(lm.x * w), int(lm.y * h)
-            color = (0, 0, 255) if idx in (12, 14, 16) else (0, 255, 0)
+            # Right arm landmarks in red, left arm in blue, rest in green
+            if idx in (12, 14, 16):
+                color = (0, 0, 255)  # red for right
+            elif idx in (11, 13, 15):
+                color = (255, 0, 0)  # blue for left
+            else:
+                color = (0, 255, 0)
             cv2.circle(bgr_frame, (cx, cy), 4, color, -1)
 
     return bgr_frame
@@ -189,8 +222,10 @@ if __name__ == "__main__":
                 rw = result.pose_world_landmarks[16]
                 print(f"Right wrist world: x={rw.x:.3f}, y={rw.y:.3f}, z={rw.z:.3f}")
 
-            if result.hand_landmarks is not None:
-                print(f"Hand detected: {len(result.hand_landmarks)} landmarks")
+            if result.right_hand_landmarks is not None:
+                print(f"Right hand detected: {len(result.right_hand_landmarks)} landmarks")
+            if result.left_hand_landmarks is not None:
+                print(f"Left hand detected: {len(result.left_hand_landmarks)} landmarks")
 
             frame_count += 1
             elapsed = time.time() - t0
