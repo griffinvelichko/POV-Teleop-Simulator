@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --tron-cyan: #00ffff;
+  --tron-cyan-dim: #007a7a;
+  --tron-orange: #ff6600;
+  --tron-orange-dim: #7a3300;
+  --tron-magenta: #ff00ff;
+  --tron-bg: #0a0a0f;
+  --tron-panel: #0d0d14;
+  --tron-border: #1a1a2e;
+}
+
+@theme inline {
+  --color-background: var(--tron-bg);
+  --color-foreground: #e0e0e0;
+  --color-tron-cyan: var(--tron-cyan);
+  --color-tron-cyan-dim: var(--tron-cyan-dim);
+  --color-tron-orange: var(--tron-orange);
+  --color-tron-orange-dim: var(--tron-orange-dim);
+  --color-tron-magenta: var(--tron-magenta);
+  --color-tron-panel: var(--tron-panel);
+  --color-tron-border: var(--tron-border);
+  --font-heading: var(--font-orbitron);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--tron-bg);
+  color: #e0e0e0;
+  font-family: var(--font-mono), monospace;
+  min-height: 100vh;
+}
+
+/* Neon text utilities */
+.text-neon-cyan {
+  color: var(--tron-cyan);
+  text-shadow: 0 0 7px var(--tron-cyan), 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.text-neon-orange {
+  color: var(--tron-orange);
+  text-shadow: 0 0 7px var(--tron-orange), 0 0 20px rgba(255, 102, 0, 0.3);
+}
+
+.text-neon-magenta {
+  color: var(--tron-magenta);
+  text-shadow: 0 0 7px var(--tron-magenta), 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+/* Neon border utilities */
+.border-glow-cyan {
+  border-color: var(--tron-cyan);
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4), inset 0 0 6px rgba(0, 255, 255, 0.05);
+}
+
+.border-glow-orange {
+  border-color: var(--tron-orange);
+  box-shadow: 0 0 6px rgba(255, 102, 0, 0.4), inset 0 0 6px rgba(255, 102, 0, 0.05);
+}
+
+.border-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0, 255, 255, 0.4), inset 0 0 6px rgba(0, 255, 255, 0.05); }
+  50% { box-shadow: 0 0 12px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.1); }
+}
+
+/* Scanline overlay */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  z-index: 10;
+}
+
+/* Status dot pulse */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 8px currentColor; }
+}
+
+.status-dot-pulse {
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
