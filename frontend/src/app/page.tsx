@@ -8,7 +8,7 @@ export default function Home() {
       {/* Header */}
       <header className="flex items-center justify-center py-4 border-b border-tron-border">
         <h1 className="font-[family-name:var(--font-orbitron)] text-xl font-bold tracking-[0.3em] uppercase text-neon-cyan">
-          POV Teleop
+          Robo Teleop
         </h1>
       </header>
 
