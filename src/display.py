@@ -51,7 +51,7 @@ class Display:
             np.ndarray: BGR composited frame ready for cv2.imshow
         """
         left_panel = cv2.resize(
-            camera_frame, (self._panel_width, self._panel_height), interpolation=cv2.INTER_LINEAR
+            cv2.flip(camera_frame, 1), (self._panel_width, self._panel_height), interpolation=cv2.INTER_LINEAR
         )
 
         if sim_frame is not None:
