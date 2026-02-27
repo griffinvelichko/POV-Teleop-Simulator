@@ -14,3 +14,4 @@ assets/*.mp4
 dist/
 build/
 src/__pycache__/
+robo-ops/
