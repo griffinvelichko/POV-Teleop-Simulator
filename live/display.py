@@ -226,8 +226,8 @@ class LiveDisplay:
 
         # Controls hint
         cv2.putText(
-            dashboard, "q=quit  e=e-stop  h=home  f=freeze",
-            (self.width - 350, 54),
+            dashboard, "q=quit  e=e-stop  h=home  f=freeze  s=stow",
+            (self.width - 400, 54),
             cv2.FONT_HERSHEY_SIMPLEX, 0.35, (120, 120, 120), 1,
         )
 

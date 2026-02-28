@@ -40,8 +40,8 @@ from display import LiveDisplay
 from robot import RobotController
 
 # Defaults
-DEFAULT_RIGHT_PORT = "/dev/ttyACM0"
-DEFAULT_LEFT_PORT = "/dev/ttyACM1"
+DEFAULT_RIGHT_PORT = "/dev/tty.usbmodem5AB90657441"
+DEFAULT_LEFT_PORT = "/dev/tty.usbmodem5AB90652661"
 DEFAULT_MAX_STEP = 5.0
 HOMING_DURATION_S = 2.0
 POSE_TIMEOUT_S = 3.0
@@ -58,6 +58,7 @@ def parse_args():
     p.add_argument("--dry-run", action="store_true", help="Run pipeline without robot (print actions)")
     p.add_argument("--right-only", action="store_true", help="Use right arm only")
     p.add_argument("--left-only", action="store_true", help="Use left arm only")
+    p.add_argument("--no-stow", action="store_true", help="Skip stow on exit (debug)")
     return p.parse_args()
 
 
@@ -143,7 +144,7 @@ def main():
         arms_str.append("left")
     print(f"\nPipeline ready ({', '.join(arms_str)} arm{'s' if len(arms_str) > 1 else ''}).")
     print("Move your arms in front of the camera.")
-    print("Keys: q=quit  e=e-stop  h=re-home  f=freeze/unfreeze\n")
+    print("Keys: q=quit  e=e-stop  h=re-home  f=freeze  s=stow\n")
 
     try:
         while not shutdown_requested:
@@ -273,6 +274,13 @@ def main():
                 if not frozen:
                     last_right_pose_time = now
                     last_left_pose_time = now
+            elif key == ord("s"):  # manual stow (keeps running after)
+                print("[stow] Stowing arms...")
+                frozen = True
+                if right_robot is not None and right_robot.connected:
+                    right_robot.stow()
+                if left_robot is not None and left_robot.connected:
+                    left_robot.stow()
 
     except Exception as e:
         print(f"\n[error] {e}")
@@ -285,9 +293,15 @@ def main():
     camera.release()
     tracker.close()
     if right_robot is not None and right_robot.connected:
-        right_robot.disconnect()
+        if args.no_stow:
+            right_robot.disconnect()
+        else:
+            right_robot.stow_and_disconnect()
     if left_robot is not None and left_robot.connected:
-        left_robot.disconnect()
+        if args.no_stow:
+            left_robot.disconnect()
+        else:
+            left_robot.stow_and_disconnect()
     display.close()
     print("Done.")
 
