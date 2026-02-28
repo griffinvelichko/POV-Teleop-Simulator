@@ -12,7 +12,6 @@ Usage (from project root):
 
 import argparse
 import os
-import signal
 import sys
 import time
 
@@ -42,7 +41,7 @@ from robot import RobotController
 # Defaults
 DEFAULT_RIGHT_PORT = "/dev/tty.usbmodem5AB90657441"
 DEFAULT_LEFT_PORT = "/dev/tty.usbmodem5AB90652661"
-DEFAULT_MAX_STEP = 5.0
+DEFAULT_MAX_STEP = None  # No per-step clamping (matches robo-ops). Smoother handles safety.
 HOMING_DURATION_S = 2.0
 POSE_TIMEOUT_S = 3.0
 
@@ -53,7 +52,7 @@ def parse_args():
     p.add_argument("--right-port", type=str, default=DEFAULT_RIGHT_PORT, help="Serial port for right arm")
     p.add_argument("--left-port", type=str, default=DEFAULT_LEFT_PORT, help="Serial port for left arm")
     p.add_argument("--alpha", type=float, default=SMOOTHING_ALPHA, help="Smoother EMA alpha")
-    p.add_argument("--max-step", type=float, default=DEFAULT_MAX_STEP, help="Max degrees per step (safety)")
+    p.add_argument("--max-step", type=float, default=DEFAULT_MAX_STEP, help="Max degrees per step (safety, default: None=unlimited)")
     p.add_argument("--no-home", action="store_true", help="Skip homing on startup")
     p.add_argument("--dry-run", action="store_true", help="Run pipeline without robot (print actions)")
     p.add_argument("--right-only", action="store_true", help="Use right arm only")
@@ -122,20 +121,10 @@ def main():
     last_right_pose_time = time.time()
     last_left_pose_time = time.time()
     frozen = False
+    e_stopped = False
     frame_count = 0
     t_start = time.time()
     fps = 0.0
-
-    # -- Graceful shutdown --
-    shutdown_requested = False
-
-    def _shutdown_handler(signum, _frame):
-        nonlocal shutdown_requested
-        shutdown_requested = True
-        print("\n[signal] Shutdown requested...")
-
-    signal.signal(signal.SIGINT, _shutdown_handler)
-    signal.signal(signal.SIGTERM, _shutdown_handler)
 
     arms_str = []
     if use_right:
@@ -147,7 +136,7 @@ def main():
     print("Keys: q=quit  e=e-stop  h=re-home  f=freeze  s=stow\n")
 
     try:
-        while not shutdown_requested:
+        while True:
             ok, frame = camera.read()
             if not ok:
                 print("Camera read failed.")
@@ -256,6 +245,7 @@ def main():
                 break
             elif key == ord("e"):  # emergency stop
                 print("[E-STOP] Disabling torque on all arms!")
+                e_stopped = True
                 if right_robot is not None:
                     right_robot.disconnect()
                 if left_robot is not None:
@@ -282,28 +272,36 @@ def main():
                 if left_robot is not None and left_robot.connected:
                     left_robot.stow()
 
+    except KeyboardInterrupt:
+        print("\nCtrl+C received, shutting down...")
+
     except Exception as e:
         print(f"\n[error] {e}")
         import traceback
 
         traceback.print_exc()
 
-    # -- Cleanup --
-    print("\nShutting down...")
-    camera.release()
-    tracker.close()
-    if right_robot is not None and right_robot.connected:
-        if args.no_stow:
-            right_robot.disconnect()
-        else:
-            right_robot.stow_and_disconnect()
-    if left_robot is not None and left_robot.connected:
-        if args.no_stow:
-            left_robot.disconnect()
-        else:
-            left_robot.stow_and_disconnect()
-    display.close()
-    print("Done.")
+    finally:
+        # -- Cleanup (always runs, even after Ctrl+C or exceptions) --
+        print("\nShutting down...")
+        camera.release()
+        tracker.close()
+
+        # Stow and disconnect robots (skip if e-stopped — already disconnected)
+        if not e_stopped:
+            if right_robot is not None and right_robot.connected:
+                if args.no_stow:
+                    right_robot.disconnect()
+                else:
+                    right_robot.stow_and_disconnect()
+            if left_robot is not None and left_robot.connected:
+                if args.no_stow:
+                    left_robot.disconnect()
+                else:
+                    left_robot.stow_and_disconnect()
+
+        display.close()
+        print("Done.")
 
 
 if __name__ == "__main__":

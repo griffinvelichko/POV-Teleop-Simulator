@@ -55,7 +55,7 @@ class RobotController:
     def __init__(
         self,
         port: str = "/dev/ttyACM0",
-        max_relative_target: float = 5.0,
+        max_relative_target: float | None = None,
         arm: str = "right",
         label: str | None = None,
         calibration_dir: Path | None = None,
